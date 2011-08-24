@@ -39,13 +39,6 @@ class Parser(object):
 
 
     def parse_lex(self, lex_struct):
-        feature_list = []
-        for struct in lex_struct:
-            feature = None
-            keyword, name, key_type = struct
-            if key_type == "feature":
-                feature = Feature(keyword=keyword, name=name,
-                                  key_type=key_type)
-            if feature:
-                feature_list.append(feature)
-        return feature_list
+        features = [Feature.build(feature_elements)
+                    for feature_elements in self._segment_lex(lex_struct)]
+        return [f for f in features if f]
