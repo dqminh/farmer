@@ -1,10 +1,18 @@
-class Feature(object):
-    def __init__(self, name, description, scenario_list, background):
+class Definition(object):
+    def __init__(self, keyword, name, key_type):
+        self.keyword = keyword
         self.name = name
-        self.description = description
-        self.scenario_list = scenario_list
-        self.background = background
+        self.key_type = key_type
 
 
-class Background(object):
+class Tag(Definition):
+    pass
+
+
+class Feature(Definition):
+    def __init__(self, keyword, name, key_type):
+        super(Feature, self).__init__(keyword, name, key_type)
+
+
+class Background(Definition):
     pass
