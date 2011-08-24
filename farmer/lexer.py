@@ -25,6 +25,8 @@ class Lexer(object):
         self.tokens = []
         # current feature description
         self.current_feature_desc = []
+        # current multiline
+        self.current_multiline = []
         # Read lines of the feature, one by one
         for line in source:
             self.line = line.strip()
@@ -36,7 +38,9 @@ class Lexer(object):
                         or self.feature_description_token()\
                         or self.examples_token()\
                         or self.step_token()\
-                        or self.tag_token()
+                        or self.tag_token()\
+                        or self.table_row_token()\
+                        or self.text_token()
                 # unless we get a new token, and the token is proper children
                 # of the feature, and current feature description is not empty
                 if token and len(self.current_feature_desc) > 0\
@@ -50,6 +54,7 @@ class Lexer(object):
                     # reset the description to prepare for new feature
                     self.current_feature_desc = []
                 if token:
+                    self.add_multiline()
                     if type(token) is list:
                         self.tokens.extend(token)
                     else:
@@ -60,7 +65,21 @@ class Lexer(object):
             self.tokens.append(("Feature Description",
                                 "\n".join(self.current_feature_desc),
                                 "feature_description"))
+        # if there are still multiline, insert it into the token list
+        self.add_multiline()
         return self.tokens
+
+    def add_multiline(self):
+        if len(self.current_multiline) > 0\
+           and (self.current_multiline[0].startswith("'''")
+                or self.current_multiline[0].startswith('"""'))\
+           and (self.current_multiline[-1].endswith('"""')
+                or self.current_multiline[-1].endswith("'''")):
+            self.tokens.append(("Multiline",
+                                "\n".join(self.current_multiline),
+                                "multiline"))
+        self.current_multiline = []
+
 
     def match_token(self, keyword, token_type):
         match = re.match("^\s*(%s):\s*(.*)" % keyword, self.line)
@@ -69,6 +88,10 @@ class Lexer(object):
             groups = match.groups()
             token = (groups[0], groups[-1], token_type)
         return token
+
+    def table_row_token(self):
+        if self.line[0] == "|":
+            return ("Row", self.line, "row")
 
     def tag_token(self):
         match = re.findall("@(\w+)", self.line)
@@ -83,6 +106,11 @@ class Lexer(object):
             groups = match.groups()
             token = (groups[0], groups[-1], "step")
         return token
+
+    def text_token(self):
+        # donot accept comment
+        if not self.line.startswith("#"):
+            self.current_multiline.append(self.line)
 
     def feature_token(self):
         return self.match_token(self.keywords["feature"], "feature")
