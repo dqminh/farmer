@@ -1,5 +1,6 @@
 from attest import Tests
 from farmer.lexer import Lexer
+from .test_helper import get_feature
 try:
     from cStringIO import StringIO
 except:
@@ -8,11 +9,19 @@ except:
 lexer = Tests()
 
 @lexer.test
+def get_language():
+    lex = Lexer()
+    with open(get_feature("language")) as handler:
+        lex.tokenize(handler)
+        assert lex.lang == "en"
+        assert len(lex.source) == 1
+
+@lexer.test
 def parse_feature_keyword():
     lex = Lexer()
     feature = StringIO("Feature: Testing\n")
     tokens = lex.tokenize(feature)
-    expected = [("Feature", "Testing", 'feature')]
+    expected = [("feature", "Testing", 0)]
     assert tokens == expected
 
 @lexer.test
@@ -20,7 +29,7 @@ def parse_background_keyword():
     lex = Lexer()
     feature = StringIO("Background: Testing\n")
     tokens = lex.tokenize(feature)
-    expected = [("Background", "Testing", 'background')]
+    expected = [("background", "Testing", 0)]
     assert tokens == expected
 
 @lexer.test
@@ -28,7 +37,7 @@ def parse_scenario_keyword():
     lex = Lexer()
     feature = StringIO("Scenario: Testing\n")
     tokens = lex.tokenize(feature)
-    expected = [("Scenario", "Testing", 'scenario')]
+    expected = [("scenario", "Testing", 0)]
     assert tokens == expected
 
 @lexer.test
@@ -36,161 +45,15 @@ def parse_scenario_outline_keyword():
     lex = Lexer()
     feature = StringIO("Scenario Outline: Testing\n")
     tokens = lex.tokenize(feature)
-    expected = [("Scenario Outline", "Testing", 'scenario_outline')]
+    expected = [("scenario_outline", "Testing", 0)]
     assert tokens == expected
-
-@lexer.test
-def parse_table_layout():
-    lex = Lexer()
-    feature = StringIO(
-        """
-        |func|name|
-        |hello|world|
-        """)
-    tokens = lex.tokenize(feature)
-    expected = [("Row", "|func|name|", "row"), ("Row", "|hello|world|", "row")]
-    print tokens
-    assert tokens == expected
-
-@lexer.test
-def parse_multiline():
-    lex = Lexer()
-    feature = StringIO(
-        """
-        '''
-        Hello World
-        '''
-        """)
-    tokens = lex.tokenize(feature)
-    expected = [("Multiline", """'''\nHello World\n'''""", "multiline")]
-    assert tokens == expected
-
 
 @lexer.test
 def parse_examples_keyword():
     lex = Lexer()
     feature = StringIO("Examples: Testing\n")
     tokens = lex.tokenize(feature)
-    expected = [("Examples", "Testing", 'examples')]
-    assert tokens == expected
-
-
-@lexer.test
-def parse_feature_with_description():
-    lex = Lexer()
-    feature = StringIO("Feature: Testing\n\tFeature Description")
-    tokens = lex.tokenize(feature)
-    expected = [("Feature", "Testing", 'feature'),
-                ("Feature Description", "Feature Description",
-                 "feature_description")]
-    assert tokens == expected
-
-@lexer.test
-def parse_feature_with_description_and_scenario():
-    lex = Lexer()
-    feature = StringIO("""
-                       Feature: Testing
-                       \tFeature Description
-                       Scenario: Hello World
-                       """)
-    tokens = lex.tokenize(feature)
-    expected = [("Feature", "Testing", 'feature'),
-                ("Feature Description", "Feature Description",
-                 "feature_description"),
-                ("Scenario", "Hello World", "scenario")
-               ]
-    assert tokens == expected
-
-@lexer.test
-def parse_feature_with_description_and_background():
-    lex = Lexer()
-    feature = StringIO("""
-                       Feature: Testing
-                       \tFeature Description
-                       Background: Hello World
-                       """)
-    tokens = lex.tokenize(feature)
-    expected = [("Feature", "Testing", 'feature'),
-                ("Feature Description", "Feature Description",
-                 "feature_description"),
-                ("Background", "Hello World", "background")
-               ]
-    assert tokens == expected
-
-@lexer.test
-def parse_feature_with_description_and_scenario_outline():
-    lex = Lexer()
-    feature = StringIO("""
-                       Feature: Testing
-                       \tFeature Description
-                       Scenario Outline: Hello World
-                       """)
-    tokens = lex.tokenize(feature)
-    expected = [("Feature", "Testing", 'feature'),
-                ("Feature Description", "Feature Description",
-                 "feature_description"),
-                ("Scenario Outline", "Hello World", "scenario_outline")
-               ]
-    assert tokens == expected
-
-@lexer.test
-def parse_step():
-    lex = Lexer()
-    feature = StringIO("Given I have test")
-    tokens = lex.tokenize(feature)
-    expected = [("Given", "I have test", 'step')]
-    assert tokens == expected
-
-@lexer.test
-def parse_feature_with_description_and_scenario_with_step():
-    lex = Lexer()
-    feature = StringIO("""
-                       Feature: Testing
-                       \tFeature Description
-                       Scenario: Hello World
-                       \tGiven I have test
-                       \tWhen I run it
-                       \tThen I failed
-                       """)
-    tokens = lex.tokenize(feature)
-    expected = [("Feature", "Testing", 'feature'),
-                ("Feature Description", "Feature Description",
-                 "feature_description"),
-                ("Scenario", "Hello World", "scenario"),
-                ("Given", "I have test", "step"),
-                ("When", "I run it", "step"),
-                ("Then", "I failed", "step"),
-               ]
-    assert tokens == expected
-
-@lexer.test
-def parse_feature_with_description_and_multiple_scenarios():
-    lex = Lexer()
-    feature = StringIO("""
-                       Feature: Testing
-                       \tFeature Description
-                       Scenario: Hello World
-                       \tGiven I have test
-                       \tWhen I run it
-                       \tThen I failed
-                       Scenario: Run again
-                       \tGiven I have 2 tests
-                       \tWhen I run it
-                       \tThen I passed
-                       """)
-    tokens = lex.tokenize(feature)
-    expected = [("Feature", "Testing", 'feature'),
-                ("Feature Description", "Feature Description",
-                 "feature_description"),
-                ("Scenario", "Hello World", "scenario"),
-                ("Given", "I have test", "step"),
-                ("When", "I run it", "step"),
-                ("Then", "I failed", "step"),
-                ("Scenario", "Run again", "scenario"),
-                ("Given", "I have 2 tests", "step"),
-                ("When", "I run it", "step"),
-                ("Then", "I passed", "step"),
-               ]
+    expected = [("examples", "Testing", 0)]
     assert tokens == expected
 
 @lexer.test
@@ -198,136 +61,114 @@ def parse_tag_keyword():
     lex = Lexer()
     feature = StringIO("@hello @world")
     tokens = lex.tokenize(feature)
-    expected = [("Tag", "hello", "tag"), ("Tag", "world", "tag")]
+    expected = [("tag", "hello", 0), ("tag", "world", 0)]
     assert tokens == expected
 
 @lexer.test
-def parse_tag_keyword_with_feature():
+def parse_step():
     lex = Lexer()
-    feature = StringIO("""
-                       @test @wip\n
-                       Feature: Testing\n
-                       """)
+    feature = StringIO("Given I have test")
     tokens = lex.tokenize(feature)
-    expected = [("Tag", "test", "tag"),
-                ("Tag", "wip", "tag"),
-                ("Feature", "Testing", "feature")
-               ]
+    expected = [("step", "I have test", 0)]
     assert tokens == expected
 
 @lexer.test
-def parse_a_complete_feature():
+def simple_feature():
     lex = Lexer()
-    feature = StringIO(
-        """
-        @wip
-        Feature: Befriending
-        In order to have some friends
-        As a Facebook user
-        I want to be able to manage my list of friends
+    with open(get_feature("simple")) as handle:
+        tokens = lex.tokenize(handle)
+        expected = [("feature", "Feature Text", 0),
+                    ("scenario", "Reading a Scenario", 1),
+                    ("step", "there is a step", 2)]
+        assert tokens == expected
 
-        Background:
-        Given I am the user Ken
-        And I have friends Barbie, Cloe
+@lexer.test
+def simple_feature_with_multiline():
+    lex = Lexer()
+    with open(get_feature("simple_with_multiline")) as handle:
+        tokens = lex.tokenize(handle)
+        expected = [("feature", "Feature Text", 0),
+                    ("scenario", "Reading a Scenario", 1),
+                    ("step", "there is a step", 2),
+                    ("multiline",
+                     "This is a multiline\nGiven that we have it"
+                     , 3)]
+        assert tokens == expected
 
-        @new_friend
-        Scenario: Adding a new friend
-        When I add a new friend named Jade
-        Then I should have friends Barbie, Cloe, Jade
+@lexer.test
+def feature_with_description_and_scenario():
+    lex = Lexer()
+    with open(get_feature("simple_with_feature_description")) as feature:
+        tokens = lex.tokenize(feature)
+        expected = [("feature", "Feature Text", 0),
+                    ("feature_description",
+                     "We should be able to read a feature",
+                     -1),
+                    ("scenario", "Reading a Scenario", 2),
+                    ("step", "there is a step", 3)]
+        assert tokens == expected
 
-        Scenario: Removing a friend
-        When I remove my friend Cloe
-        Then I should have friends Barbie
-        """
-        )
+@lexer.test
+def feature_with_comment():
+    lex = Lexer()
+    with open(get_feature("simple_with_comments")) as handle:
+        tokens = lex.tokenize(handle)
+        expected = [("feature", "Feature Text", 1),
+                    ("scenario", "Reading a Scenario", 3),
+                    ("step", "there is a step", 5)]
+        assert tokens == expected
+
+@lexer.test
+def parse_table_layout():
+    lex = Lexer()
+    feature = StringIO("|func|name|\n|hello|world|")
     tokens = lex.tokenize(feature)
-    expected = [
-        ("Tag", "wip", "tag"),
-        ("Feature", "Befriending", "feature"),
-        ("Feature Description",
-         "In order to have some friends\nAs a Facebook user\nI want to be able to manage my list of friends",
-         "feature_description"),
-        ("Background", "", "background"),
-        ("Given", "I am the user Ken", "step"),
-        ("And", "I have friends Barbie, Cloe", "step"),
-        ("Tag", "new_friend", "tag"),
-        ("Scenario", "Adding a new friend", "scenario"),
-        ("When", "I add a new friend named Jade", "step"),
-        ("Then", "I should have friends Barbie, Cloe, Jade", "step"),
-        ("Scenario", "Removing a friend", "scenario"),
-        ("When", "I remove my friend Cloe", "step"),
-        ("Then", "I should have friends Barbie", "step"),
-    ]
+    expected = [("row", "|func|name|", 0), ("row", "|hello|world|", 1)]
     assert tokens == expected
 
 @lexer.test
-def parse_a_complete_feature_with_table_and_multiline():
+def complex_feature():
     lex = Lexer()
-    feature = StringIO(
-        """
-        @wip
-        Feature: Befriending
-        In order to have some friends
-        As a Facebook user
-        I want to be able to manage my list of friends
+    with open(get_feature("complex")) as feature:
+        tokens = lex.tokenize(feature)
+        expected = [
+            ("tag", "tag1", 2),
+            ("tag", "tag2", 2),
+            ("feature", "Feature Text", 3),
+            ("feature_description",
+             "In order to test multiline forms\nAs a ragel writer\nI need to check for complex combinations",
+            -1),
 
-        Background:
-        Given I am the user Ken
-        And I have friends Barbie, Cloe
+            ("background", "", 12),
+            ("step", "this is a background step", 13),
+            ("step", "this is another one", 14),
 
-        Scenario Outline: Add friend
-            When I add a new friend named <name>
-            Then my total number of friends should be <total>
+            ("tag", "tag3", 16),
+            ("tag", "tag4", 16),
+            ("scenario", "Reading a Scenario", 17),
+            ("step", "there is a step", 18),
+            ("step", "not another step", 19),
 
-            Examples:
-                |name|total|
-                |Jade|3|
+            ("tag", "tag3", 21),
+            ("scenario", "Reading a second scenario", 22),
+            ("step", "a third step with a table", 24),
+            ("row", "|a|b|", 25),
+            ("row", "|c|d|", 26),
+            ("row", "|e|f|", 27),
+            ("step", "I am still testing things", 28),
+            ("row", "|g|h|", 29),
+            ("row", "|e|r|", 30),
+            ("row", "|k|i|", 31),
+            ("row", "|n||", 32),
+            ("step", "I am done testing these tables", 33),
+            ("step", "I am happy", 35),
 
-        @new_friend
-        Scenario: Adding a new friend
-            When I add a new friend named Jade
-                '''
-                Testing
-                '''
-            Then I should have friends Barbie, Cloe, Jade
-
-        Scenario: Removing a friend
-            When I remove my friend Cloe
-            Then I should have friends Barbie
-                '''
-                Testing
-                '''
-        """
-        )
-    tokens = lex.tokenize(feature)
-    expected = [
-        ("Tag", "wip", "tag"),
-        ("Feature", "Befriending", "feature"),
-        ("Feature Description",
-         "In order to have some friends\nAs a Facebook user\nI want to be able to manage my list of friends",
-         "feature_description"),
-
-        ("Background", "", "background"),
-        ("Given", "I am the user Ken", "step"),
-        ("And", "I have friends Barbie, Cloe", "step"),
-
-        ("Scenario Outline", "Add friend", "scenario_outline"),
-        ("When", "I add a new friend named <name>", "step"),
-        ("Then", "my total number of friends should be <total>", "step"),
-        ("Examples", "", "examples"),
-        ("Row", "|name|total|", "row"),
-        ("Row", "|Jade|3|", "row"),
-
-        ("Tag", "new_friend", "tag"),
-        ("Scenario", "Adding a new friend", "scenario"),
-        ("When", "I add a new friend named Jade", "step"),
-        ("Multiline", "'''\nTesting\n'''", "multiline"),
-        ("Then", "I should have friends Barbie, Cloe, Jade", "step"),
-
-        ("Scenario", "Removing a friend", "scenario"),
-        ("When", "I remove my friend Cloe", "step"),
-        ("Then", "I should have friends Barbie", "step"),
-        ("Multiline", "'''\nTesting\n'''", "multiline")
-    ]
-    print tokens[-1]
-    assert tokens == expected
+            ("scenario", "Hammerzeit", 37),
+            ("step", "All work and no play", 38),
+            ("multiline",
+             "Makes Homer something something\nAnd something else",
+             39),
+            ("step", "crazy", 43)
+        ]
+        for index , item in enumerate(tokens):
+            assert tokens[index] == expected[index]

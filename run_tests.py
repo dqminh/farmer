@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from attest import Tests
 
 tests = Tests(["farmer.tests.collection"])
